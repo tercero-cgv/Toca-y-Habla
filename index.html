@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toca y Habla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f1ea;--card:#ffffff;--ink:#22303a;--muted:#62707a;--line:#ddd6c8;--pri:#2b6f9e;--pri-soft:#dceaf4;
+ --c-com:#2b6f9e;--c-com-s:#dceaf4;--c-food:#c9752e;--c-food-s:#f7e6d6;--c-hig:#2f8a6e;--c-hig-s:#d9efe7;--c-emo:#b24a5f;--c-emo-s:#f4dce1;--c-lug:#7b5ea7;--c-lug-s:#e8e0f3;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15191c;--card:#1e2428;--ink:#e6edf1;--muted:#a1adb5;--line:#323b41;--pri:#6aa8d6;--pri-soft:#203342;
+ --c-com-s:#203342;--c-food-s:#3a2a1c;--c-hig-s:#1c3a30;--c-emo-s:#3b2026;--c-lug-s:#2c2540;}}
+:root[data-theme="dark"]{--bg:#15191c;--card:#1e2428;--ink:#e6edf1;--muted:#a1adb5;--line:#323b41;--pri:#6aa8d6;--pri-soft:#203342;--c-com-s:#203342;--c-food-s:#3a2a1c;--c-hig-s:#1c3a30;--c-emo-s:#3b2026;--c-lug-s:#2c2540;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Univers Condensed","Roboto Condensed","Arial Narrow",sans-serif;font-weight:300}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:12px 16px 28px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-size:1.5rem;font-weight:600}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--pri);display:grid;place-items:center;color:#fff;font-size:1.2rem}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.tools select,.tools button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:7px 10px;cursor:pointer}
+.strip{display:flex;align-items:center;gap:8px;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:8px;margin:12px 0;min-height:96px}
+.chips{display:flex;gap:6px;flex:1;overflow-x:auto;min-height:76px;align-items:center}
+.chips .hint{color:var(--muted);padding-left:8px}
+.chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:76px;border-radius:12px;background:var(--pri-soft);font-size:.8rem;text-align:center;line-height:1.05}
+.chip .e{font-size:1.9rem}.chip img{width:44px;height:44px;object-fit:cover;border-radius:8px}
+.say{border:0;background:var(--pri);color:#fff;border-radius:14px;padding:0 18px;height:76px;font-size:1.1rem;font-weight:600;cursor:pointer}
+.del{border:1px solid var(--line);background:var(--card);border-radius:14px;width:56px;height:76px;font-size:1.4rem;cursor:pointer}
+.cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.cat{flex:0 0 auto;border:2px solid transparent;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:400}
+.cat.on{border-color:var(--ink);font-weight:600}
+.grid{display:grid;gap:10px;margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(var(--cell,130px),1fr))}
+.card{border:0;border-radius:18px;background:var(--card);padding:10px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;min-height:var(--h,128px);box-shadow:0 2px 0 rgba(0,0,0,.06);border-top:8px solid var(--cc,var(--pri));transition:transform .08s}
+.card:active{transform:scale(.96)}
+.card .e{font-size:var(--es,3rem);line-height:1}
+.card img{width:var(--is,64px);height:var(--is,64px);object-fit:cover;border-radius:12px}
+.card .w{font-size:var(--ws,1.05rem);font-weight:400;text-align:center}
+.card.spk{outline:4px solid var(--cc,var(--pri))}
+.card .x{position:absolute;top:4px;right:6px;font-size:.9rem;border:0;background:transparent;cursor:pointer}
+.card{position:relative}
+/* niveles */
+body.nivel-superior{--cell:104px;--h:96px;--es:2rem;--is:44px;--ws:1rem}
+body.nivel-superior .card .e{opacity:.9}
+body.nivel-intermedia{--cell:118px;--h:112px;--es:2.5rem;--is:54px}
+body.nivel-elemental{--cell:140px;--h:140px;--es:3.4rem;--is:72px;--ws:1.15rem}
+.edit{display:none;margin-top:14px;background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:12px}
+body.editing .edit{display:block}
+.edit form{display:grid;gap:8px;grid-template-columns:1fr;max-width:520px}
+@media(min-width:640px){.edit form{grid-template-columns:110px 1fr}}
+.edit input,.edit select{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg)}
+.edit .ok{border:0;background:var(--pri);color:#fff;border-radius:12px;padding:10px;font-weight:600;cursor:pointer}
+.note{color:var(--muted);font-size:.85rem;margin-top:10px}
+.foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:.85rem;margin-top:18px}
+</style>
+</head>
+<body class="nivel-elemental">
+<div class="wrap">
+<header>
+  <div class="brand"><div class="logo">🗣️</div>Toca y Habla</div>
+  <div class="tools">
+    <select id="nivel" aria-label="Nivel">
+      <option value="elemental">Elemental</option>
+      <option value="intermedia">Intermedia</option>
+      <option value="superior">Superior</option>
+    </select>
+    <button id="editBtn">✏️ Maestro</button>
+  </div>
+</header>
+
+<div class="strip">
+  <div class="chips" id="chips"><span class="hint">Toca las imágenes para armar tu frase…</span></div>
+  <button class="del" id="delBtn" aria-label="Borrar">⌫</button>
+  <button class="say" id="sayBtn">🔊 Decir</button>
+</div>
+
+<div class="cats" id="cats"></div>
+<div class="grid" id="grid"></div>
+
+<div class="edit" id="edit">
+  <b>Modo maestro: añadir una tarjeta propia</b>
+  <p class="note">Usa fotos reales de la escuela (su comedor, su baño, su maestra). Las tarjetas quedan guardadas en esta tableta.</p>
+  <form id="addForm">
+    <label for="fw">Palabra</label><input id="fw" required placeholder="Ej.: Mi maestra">
+    <label for="fc">Categoría</label><select id="fc"></select>
+    <label for="fe">Emoji</label><input id="fe" maxlength="4" placeholder="Opcional, si no hay foto">
+    <label for="ff">Foto</label><input id="ff" type="file" accept="image/*">
+    <span></span><button class="ok">Añadir tarjeta</button>
+  </form>
+  <p class="note">Para borrar una tarjeta propia, toca la ✕ en su esquina (solo en modo maestro).</p>
+</div>
+
+<div class="foot"><span>Prototipo educativo · Liz Lozada Lacén · EDES 4202</span><span id="voz"></span></div>
+</div>
+
+<script>
+const CATS=[
+ {id:"com",n:"Comandos",c:"var(--c-com)",s:"var(--c-com-s)"},
+ {id:"food",n:"Comedor",c:"var(--c-food)",s:"var(--c-food-s)"},
+ {id:"hig",n:"Higiene",c:"var(--c-hig)",s:"var(--c-hig-s)"},
+ {id:"emo",n:"Me siento",c:"var(--c-emo)",s:"var(--c-emo-s)"},
+ {id:"lug",n:"Lugares",c:"var(--c-lug)",s:"var(--c-lug-s)"}];
+const BASE={
+ com:[["Yo quiero","🙋"],["Más","➕"],["Ayuda","🆘"],["Pausa","✋"],["Terminé","✅"],["No quiero","🙅"],["Sí","👍"],["No","👎"],["Espera","⏳"],["Gracias","🙏"]],
+ food:[["Agua","💧"],["Jugo","🧃"],["Leche","🥛"],["Arroz","🍚"],["Habichuelas","🫘"],["Pollo","🍗"],["Pan","🍞"],["Fruta","🍎"],["Merienda","🍪"],["No me gusta","🤢"]],
+ hig:[["Baño","🚻"],["Lavarme las manos","🧼"],["Papel","🧻"],["Servilleta","🧽"],["Me ensucié","😬"],["Cepillarme","🪥"]],
+ emo:[["Contento","😊"],["Triste","😢"],["Enojado","😠"],["Cansado","🥱"],["Me duele","🤕"],["Tengo miedo","😨"],["Mucho ruido","🔊"]],
+ lug:[["Salón","🏫"],["Comedor","🍽️"],["Patio","🌳"],["Biblioteca","📚"],["Enfermería","🏥"],["Casa","🏠"]]};
+const KEY="tocaHabla.v1";
+let custom=[];try{custom=JSON.parse(localStorage.getItem(KEY+".custom"))||[]}catch(e){custom=[]}
+let cur="com",phrase=[];
+const $=id=>document.getElementById(id);
+function saveCustom(){try{localStorage.setItem(KEY+".custom",JSON.stringify(custom))}catch(e){alertNote("No se pudo guardar (la foto puede ser muy grande).")}}
+function alertNote(t){$("voz").textContent=t}
+// voz
+let voice=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();const pref=["es-PR","es-US","es-MX","es-419","es-ES"];for(const p of pref){const v=vs.find(v=>v.lang===p||v.lang.replace("_","-")===p);if(v){voice=v;break}}if(!voice)voice=vs.find(v=>v.lang&&v.lang.startsWith("es"))||null;$("voz").textContent=voice?("Voz: "+voice.name):"Voz: la del dispositivo";}
+if("speechSynthesis" in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+function speak(t){try{if(!("speechSynthesis" in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:"es-US";if(voice)u.voice=voice;u.rate=.9;speechSynthesis.speak(u)}catch(e){}}
+function items(cat){return [...BASE[cat].map(([w,e])=>({w,e})),...custom.filter(c=>c.cat===cat)]}
+function renderCats(){$("cats").innerHTML=CATS.map(c=>`<button class="cat ${c.id===cur?"on":""}" data-c="${c.id}" style="background:${c.s};color:var(--ink)">${c.n}</button>`).join("");
+ $("cats").querySelectorAll(".cat").forEach(b=>b.onclick=()=>{cur=b.dataset.c;renderCats();renderGrid()});
+ $("fc").innerHTML=CATS.map(c=>`<option value="${c.id}">${c.n}</option>`).join("")}
+function renderGrid(){const cat=CATS.find(c=>c.id===cur);
+ $("grid").innerHTML=items(cur).map((it,i)=>`<button class="card" data-i="${i}" style="--cc:${cat.c}">${it.img?`<img src="${it.img}" alt="">`:`<span class="e">${it.e||"⬜"}</span>`}<span class="w">${it.w}</span>${it.id&&document.body.classList.contains("editing")?`<span class="x" data-id="${it.id}" role="button" aria-label="Borrar">✕</span>`:""}</button>`).join("");
+ $("grid").querySelectorAll(".card").forEach(b=>b.onclick=ev=>{const x=ev.target.closest(".x");const it=items(cur)[+b.dataset.i];
+   if(x){custom=custom.filter(c=>c.id!==x.dataset.id);saveCustom();renderGrid();return}
+   speak(it.w);phrase.push(it);renderChips();b.classList.add("spk");setTimeout(()=>b.classList.remove("spk"),400)})}
+function renderChips(){$("chips").innerHTML=phrase.length?phrase.map(it=>`<div class="chip">${it.img?`<img src="${it.img}" alt="">`:`<span class="e">${it.e||"⬜"}</span>`}${it.w}</div>`).join(""):`<span class="hint">Toca las imágenes para armar tu frase…</span>`;
+ $("chips").scrollLeft=9999}
+$("sayBtn").onclick=()=>{if(phrase.length)speak(phrase.map(p=>p.w).join(" "))};
+$("delBtn").onclick=()=>{phrase.pop();renderChips()};
+$("delBtn").ondblclick=()=>{phrase=[];renderChips()};
+$("nivel").onchange=e=>{document.body.className=document.body.className.replace(/nivel-\w+/,"nivel-"+e.target.value);try{localStorage.setItem(KEY+".nivel",e.target.value)}catch(_){}};
+$("editBtn").onclick=()=>{document.body.classList.toggle("editing");$("editBtn").textContent=document.body.classList.contains("editing")?"✔ Listo":"✏️ Maestro";renderGrid()};
+function shrink(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement("canvas");const s=160/Math.max(im.width,im.height);c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.8))};im.src=r.result};r.readAsDataURL(file)})}
+$("addForm").onsubmit=async e=>{e.preventDefault();const f=$("ff").files[0];const img=f?await shrink(f):null;
+ custom.push({id:"c"+Date.now(),w:$("fw").value.trim(),cat:$("fc").value,e:$("fe").value.trim(),img});saveCustom();cur=$("fc").value;e.target.reset();renderCats();renderGrid()};
+try{const n=localStorage.getItem(KEY+".nivel");if(n){$("nivel").value=n;document.body.className=document.body.className.replace(/nivel-\w+/,"nivel-"+n)}}catch(e){}
+renderCats();renderGrid();
+</script>
+</body>
+</html>
