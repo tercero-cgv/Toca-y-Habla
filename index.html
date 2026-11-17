@@ -52,6 +52,28 @@ body.editing .edit{display:block}
 .edit input,.edit select{border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg)}
 .edit .ok{border:0;background:var(--pri);color:#fff;border-radius:12px;padding:10px;font-weight:600;cursor:pointer}
 .note{color:var(--muted);font-size:.85rem;margin-top:10px}
+
+.rec{display:none;position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--card);border:2px solid var(--pri);border-radius:18px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:20;gap:8px;align-items:center;flex-wrap:wrap;max-width:94vw}
+.rec.show{display:flex}
+.rec b{font-weight:600}
+.rec button{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 12px;cursor:pointer}
+.rec .go{background:#b24a5f;color:#fff;border:0}
+.rec .dot{width:12px;height:12px;border-radius:50%;background:#b24a5f;animation:pl 1s infinite}
+@keyframes pl{50%{opacity:.2}}
+.mic{position:absolute;top:4px;left:6px;font-size:.85rem}
+.prog{display:none;margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+body.editing .prog{display:block}
+.prog h3{margin:0 0 4px;font-size:1.1rem;font-weight:600}
+.prog .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.prog .row button{border:0;border-radius:12px;padding:10px 12px;color:#fff;font-weight:600;cursor:pointer}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}
+.kpi{background:var(--bg);border-radius:12px;padding:10px}
+.kpi .n{font-size:1.8rem;font-weight:600;color:var(--pri)}
+.kpi .l{font-size:.85rem;color:var(--muted)}
+.top{display:flex;gap:6px;flex-wrap:wrap}
+.top span{background:var(--pri-soft);border-radius:999px;padding:4px 10px;font-size:.9rem}
+.dots{display:flex;gap:6px;margin-top:4px}
+.dots i{width:20px;height:20px;border-radius:50%;display:inline-block}
 .foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:.85rem;margin-top:18px}
 </style>
 </head>
@@ -88,10 +110,28 @@ body.editing .edit{display:block}
     <label for="ff">Foto</label><input id="ff" type="file" accept="image/*">
     <span></span><button class="ok">Añadir tarjeta</button>
   </form>
-  <p class="note">Para borrar una tarjeta propia, toca la ✕ en su esquina (solo en modo maestro).</p>
+  <p class="note">Para borrar una tarjeta propia, toca la ✕ en su esquina. <b>🎙 Voz de la familia:</b> en modo maestro, toca cualquier tarjeta para grabar la palabra con la voz de mamá, papá o un compañero. Las tarjetas con 🎙 ya tienen su voz grabada.</p>
 </div>
 
-<div class="foot"><span>Prototipo educativo · Liz Lozada Lacén · EDES 4202</span><span id="voz"></span></div>
+
+<div class="prog" id="prog">
+  <h3>📊 Registro de progreso</h3>
+  <p class="note" style="margin-top:0">Cada toque queda registrado en esta tableta. Úsalo para medir los resultados esperados.</p>
+  <div class="kpis" id="kpis"></div>
+  <div><b>Palabras más usadas</b></div>
+  <div class="top" id="topw"></div>
+  <div style="margin-top:12px"><b>Meta en el comedor: pedir con el equipo en 4 de 5 oportunidades</b></div>
+  <p class="note" style="margin:2px 0 0">Después de cada oportunidad en el comedor, marca cómo pidió.</p>
+  <div class="row">
+    <button data-o="solo" style="background:#2f8a6e">✅ Lo pidió solo</button>
+    <button data-o="ayuda" style="background:#c9752e">🤝 Con ayuda</button>
+    <button data-o="no" style="background:#b24a5f">✖ No usó el equipo</button>
+  </div>
+  <div id="meta"></div>
+  <div class="row"><button id="csv" style="background:var(--pri)">⬇ Descargar registro (CSV)</button><button id="clearLog" style="background:#62707a">Borrar registro</button></div>
+</div>
+<div class="rec" id="rec"></div>
+<div class="foot"><span>Prototipo educativo · Héctor Lozada Lacén · EDES 4202</span><span id="voz"></span></div>
 </div>
 
 <script>
@@ -118,27 +158,66 @@ let voice=null;
 function pickVoice(){const vs=speechSynthesis.getVoices();const pref=["es-PR","es-US","es-MX","es-419","es-ES"];for(const p of pref){const v=vs.find(v=>v.lang===p||v.lang.replace("_","-")===p);if(v){voice=v;break}}if(!voice)voice=vs.find(v=>v.lang&&v.lang.startsWith("es"))||null;$("voz").textContent=voice?("Voz: "+voice.name):"Voz: la del dispositivo";}
 if("speechSynthesis" in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
 function speak(t){try{if(!("speechSynthesis" in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:"es-US";if(voice)u.voice=voice;u.rate=.9;speechSynthesis.speak(u)}catch(e){}}
+
+// ---- Voz de la familia (IndexedDB) ----
+let db=null;const audioCache={};
+function openDB(){return new Promise(res=>{try{const r=indexedDB.open("tocaHablaVoz",1);r.onupgradeneeded=()=>r.result.createObjectStore("voz");r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>res()}catch(e){res()}})}
+function idbGet(k){return new Promise(res=>{if(!db)return res(null);try{const q=db.transaction("voz").objectStore("voz").get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)}catch(e){res(null)}})}
+function idbPut(k,v){return new Promise(res=>{if(!db)return res();try{const t=db.transaction("voz","readwrite");t.objectStore("voz").put(v,k);t.oncomplete=()=>res();t.onerror=()=>res()}catch(e){res()}})}
+function idbDel(k){return new Promise(res=>{if(!db)return res();try{const t=db.transaction("voz","readwrite");t.objectStore("voz").delete(k);t.oncomplete=()=>res();t.onerror=()=>res()}catch(e){res()}})}
+async function loadVoices(){if(!db)return;try{const t=db.transaction("voz");const st=t.objectStore("voz");const q=st.getAllKeys();q.onsuccess=async()=>{for(const k of q.result){audioCache[k]=await idbGet(k)}renderGrid()}}catch(e){}}
+function playBlob(b){return new Promise(res=>{try{const a=new Audio(URL.createObjectURL(b));a.onended=res;a.onerror=res;a.play().catch(res)}catch(e){res()}})}
+function speakP(t){return new Promise(res=>{try{if(!("speechSynthesis" in window))return res();const u=new SpeechSynthesisUtterance(t);u.lang=voice?voice.lang:"es-US";if(voice)u.voice=voice;u.rate=.9;u.onend=res;u.onerror=res;speechSynthesis.speak(u)}catch(e){res()}})}
+async function sayWord(w){try{speechSynthesis.cancel()}catch(e){} if(audioCache[w])return playBlob(audioCache[w]);return speakP(w)}
+async function sayPhrase(ws){try{speechSynthesis.cancel()}catch(e){} if(ws.every(w=>!audioCache[w]))return speakP(ws.join(" "));for(const w of ws){await sayWord(w)}}
+let mr=null,chunks=[];
+function recUI(w){const r=$("rec");const has=!!audioCache[w];
+ r.innerHTML=`<b>🎙 “${w}”</b><button class="go" id="rStart">● Grabar</button>${has?`<button id="rPlay">▶ Escuchar</button><button id="rDel">🗑 Borrar voz</button>`:""}<button id="rClose">Cerrar</button>`;r.classList.add("show");
+ $("rClose").onclick=()=>{try{mr&&mr.state==="recording"&&mr.stop()}catch(e){}r.classList.remove("show")};
+ if(has){$("rPlay").onclick=()=>playBlob(audioCache[w]);$("rDel").onclick=async()=>{await idbDel(w);delete audioCache[w];renderGrid();recUI(w)}}
+ $("rStart").onclick=async()=>{try{const st=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];mr=new MediaRecorder(st);mr.ondataavailable=e=>chunks.push(e.data);
+   mr.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const b=new Blob(chunks,{type:mr.mimeType||"audio/webm"});audioCache[w]=b;await idbPut(w,b);renderGrid();recUI(w);playBlob(b)};
+   mr.start();r.innerHTML=`<span class="dot"></span><b>Grabando “${w}”…</b><button class="go" id="rStop">■ Detener</button>`;$("rStop").onclick=()=>mr.stop()}
+  catch(e){r.innerHTML=`<b>No se pudo usar el micrófono.</b> Abre la app desde su enlace (https) y permite el micrófono. <button id="rClose2">Cerrar</button>`;$("rClose2").onclick=()=>r.classList.remove("show")}}}
+// ---- Registro de progreso ----
+let LOG=[],OPS=[];try{LOG=JSON.parse(localStorage.getItem(KEY+".log"))||[];OPS=JSON.parse(localStorage.getItem(KEY+".ops"))||[]}catch(e){}
+function saveLog(){try{localStorage.setItem(KEY+".log",JSON.stringify(LOG.slice(-3000)));localStorage.setItem(KEY+".ops",JSON.stringify(OPS.slice(-500)))}catch(e){}}
+function stamp(){const d=new Date();return {f:d.toLocaleDateString("es-PR"),h:d.toLocaleTimeString("es-PR",{hour:"numeric",minute:"2-digit"})}}
+function logTap(w,cat,tipo){const s=stamp();LOG.push({f:s.f,h:s.h,w,cat,tipo});saveLog();renderProg()}
+function renderProg(){if(!$("kpis"))return;const hoy=stamp().f;const td=LOG.filter(x=>x.f===hoy);
+ const frases=td.filter(x=>x.tipo==="frase").length;const comedor=td.filter(x=>x.cat==="food").length;
+ $("kpis").innerHTML=[[td.filter(x=>x.tipo==="toque").length,"toques hoy"],[frases,"frases dichas hoy"],[comedor,"pedidos del comedor hoy"],[LOG.filter(x=>x.tipo==="toque").length,"toques en total"]].map(([n,l])=>`<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+ const cnt={};LOG.filter(x=>x.tipo==="toque").forEach(x=>cnt[x.w]=(cnt[x.w]||0)+1);
+ const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ $("topw").innerHTML=top.length?top.map(([w,c])=>`<span>${w} · ${c}</span>`).join(""):`<span class="note">Todavía no hay toques registrados.</span>`;
+ const last=OPS.slice(-5);const solos=last.filter(o=>o.o==="solo").length;const col={solo:"#2f8a6e",ayuda:"#c9752e",no:"#b24a5f"};
+ $("meta").innerHTML=last.length?`<div class="dots">${last.map(o=>`<i title="${o.f}" style="background:${col[o.o]}"></i>`).join("")}</div><p style="margin:6px 0 0"><b>${solos} de ${last.length}</b> en las últimas oportunidades ${solos>=4&&last.length===5?"· 🎉 ¡Meta lograda!":""}</p>`:`<p class="note">Sin oportunidades registradas.</p>`}
+document.querySelectorAll(".prog .row button[data-o]").forEach(b=>b.onclick=()=>{const s=stamp();OPS.push({f:s.f+" "+s.h,o:b.dataset.o});saveLog();renderProg()});
+$("csv").onclick=()=>{const rows=[["fecha","hora","palabra","categoria","tipo"],...LOG.map(x=>[x.f,x.h,x.w,x.cat,x.tipo]),[],["oportunidad comedor","resultado"],...OPS.map(o=>[o.f,o.o])];
+ const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="toca-y-habla-registro.csv";a.click()};
+$("clearLog").onclick=()=>{LOG=[];OPS=[];saveLog();renderProg()};
 function items(cat){return [...BASE[cat].map(([w,e])=>({w,e})),...custom.filter(c=>c.cat===cat)]}
 function renderCats(){$("cats").innerHTML=CATS.map(c=>`<button class="cat ${c.id===cur?"on":""}" data-c="${c.id}" style="background:${c.s};color:var(--ink)">${c.n}</button>`).join("");
  $("cats").querySelectorAll(".cat").forEach(b=>b.onclick=()=>{cur=b.dataset.c;renderCats();renderGrid()});
  $("fc").innerHTML=CATS.map(c=>`<option value="${c.id}">${c.n}</option>`).join("")}
 function renderGrid(){const cat=CATS.find(c=>c.id===cur);
- $("grid").innerHTML=items(cur).map((it,i)=>`<button class="card" data-i="${i}" style="--cc:${cat.c}">${it.img?`<img src="${it.img}" alt="">`:`<span class="e">${it.e||"⬜"}</span>`}<span class="w">${it.w}</span>${it.id&&document.body.classList.contains("editing")?`<span class="x" data-id="${it.id}" role="button" aria-label="Borrar">✕</span>`:""}</button>`).join("");
+ $("grid").innerHTML=items(cur).map((it,i)=>`<button class="card" data-i="${i}" style="--cc:${cat.c}">${it.img?`<img src="${it.img}" alt="">`:`<span class="e">${it.e||"⬜"}</span>`}${audioCache[it.w]?`<span class="mic">🎙</span>`:""}<span class="w">${it.w}</span>${it.id&&document.body.classList.contains("editing")?`<span class="x" data-id="${it.id}" role="button" aria-label="Borrar">✕</span>`:""}</button>`).join("");
  $("grid").querySelectorAll(".card").forEach(b=>b.onclick=ev=>{const x=ev.target.closest(".x");const it=items(cur)[+b.dataset.i];
    if(x){custom=custom.filter(c=>c.id!==x.dataset.id);saveCustom();renderGrid();return}
-   speak(it.w);phrase.push(it);renderChips();b.classList.add("spk");setTimeout(()=>b.classList.remove("spk"),400)})}
+   if(document.body.classList.contains("editing")){recUI(it.w);return}
+   sayWord(it.w);logTap(it.w,cur,"toque");phrase.push(it);renderChips();b.classList.add("spk");setTimeout(()=>b.classList.remove("spk"),400)})}
 function renderChips(){$("chips").innerHTML=phrase.length?phrase.map(it=>`<div class="chip">${it.img?`<img src="${it.img}" alt="">`:`<span class="e">${it.e||"⬜"}</span>`}${it.w}</div>`).join(""):`<span class="hint">Toca las imágenes para armar tu frase…</span>`;
  $("chips").scrollLeft=9999}
-$("sayBtn").onclick=()=>{if(phrase.length)speak(phrase.map(p=>p.w).join(" "))};
+$("sayBtn").onclick=()=>{if(phrase.length){sayPhrase(phrase.map(p=>p.w));logTap(phrase.map(p=>p.w).join(" "),"frase","frase")}};
 $("delBtn").onclick=()=>{phrase.pop();renderChips()};
 $("delBtn").ondblclick=()=>{phrase=[];renderChips()};
 $("nivel").onchange=e=>{document.body.className=document.body.className.replace(/nivel-\w+/,"nivel-"+e.target.value);try{localStorage.setItem(KEY+".nivel",e.target.value)}catch(_){}};
-$("editBtn").onclick=()=>{document.body.classList.toggle("editing");$("editBtn").textContent=document.body.classList.contains("editing")?"✔ Listo":"✏️ Maestro";renderGrid()};
+$("editBtn").onclick=()=>{document.body.classList.toggle("editing");$("editBtn").textContent=document.body.classList.contains("editing")?"✔ Listo":"✏️ Maestro";$("rec").classList.remove("show");renderGrid();renderProg()};
 function shrink(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement("canvas");const s=160/Math.max(im.width,im.height);c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.8))};im.src=r.result};r.readAsDataURL(file)})}
 $("addForm").onsubmit=async e=>{e.preventDefault();const f=$("ff").files[0];const img=f?await shrink(f):null;
  custom.push({id:"c"+Date.now(),w:$("fw").value.trim(),cat:$("fc").value,e:$("fe").value.trim(),img});saveCustom();cur=$("fc").value;e.target.reset();renderCats();renderGrid()};
 try{const n=localStorage.getItem(KEY+".nivel");if(n){$("nivel").value=n;document.body.className=document.body.className.replace(/nivel-\w+/,"nivel-"+n)}}catch(e){}
-renderCats();renderGrid();
+renderCats();renderGrid();renderProg();openDB().then(loadVoices);
 </script>
 </body>
 </html>
